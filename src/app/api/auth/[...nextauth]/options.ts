@@ -23,7 +23,7 @@ export const authOptions: NextAuthOptions = {
             email: profile?.email,
             githubId: profile?.id.toString(),
             githubUsername: profile?.login,
-            avatarUrl: profile?.avatar_url
+            avatarUrl: profile?.avatar_url,
           });
 
           await newUser.save();
@@ -31,7 +31,7 @@ export const authOptions: NextAuthOptions = {
 
         return true;
       } catch (error) {
-        console.log("Error: ", error);
+        console.log("[SIGN_IN_ERROR]: ", error);
         return false;
       }
     },
@@ -51,7 +51,7 @@ export const authOptions: NextAuthOptions = {
             token.avatarUrl = existingUser.avatarUrl;
           }
         } catch (error) {
-          console.log("Error: ", error);
+          console.log("[JWT_ERROR]: ", error);
         }
       }
       return token;
@@ -68,4 +68,8 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
   },
+  session: {
+    strategy: "jwt"
+  },
+  secret: process.env.NEXTAUTH_SECRET
 };
