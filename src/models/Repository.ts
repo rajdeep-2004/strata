@@ -1,7 +1,7 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export interface Repository extends Document {
-  userId: Schema.Types.ObjectId;
+  userId: Types.ObjectId;
   githubRepoId: string;
   githubRepoUrl: string;
   repoName: string;
@@ -15,7 +15,7 @@ export interface Repository extends Document {
 const RepositorySchema: Schema<Repository> = new Schema(
   {
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
