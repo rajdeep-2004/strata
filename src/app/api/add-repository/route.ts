@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 import { authOptions } from "../auth/[...nextauth]/options";
 import axios, { isAxiosError } from "axios";
+import { ingestionPipeline } from "@/src/ingestion/ingestionPipeline";
 
 export async function POST(request: NextRequest) {
   try {
@@ -64,6 +65,9 @@ export async function POST(request: NextRequest) {
       githubRepoOwner: githubRepo.owner.login,
       defaultBranch: githubRepo.default_branch,
     });
+
+    // TODO: Remove
+    await ingestionPipeline(repository);
 
     await repository.save();
 
