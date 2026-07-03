@@ -2,7 +2,7 @@ import {
   IGNORED_DIRECTORIES,
   IGNORED_EXTENSIONS,
   IGNORED_FILES,
-} from "./constants";
+} from "./ingestionConfig";
 export function shouldIndexFile(path: string) {
   const pathParts = path.split("/");
   const file = pathParts.pop() || "";

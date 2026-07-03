@@ -86,3 +86,75 @@ export const IGNORED_FILES = [
   ".DS_Store",
   "Thumbs.db",
 ];
+
+export const LANGUAGES = {
+  // JavaScript / TypeScript
+  ".js": "js",
+  ".jsx": "js",
+  ".mjs": "js",
+  ".cjs": "js",
+  ".ts": "js",
+  ".tsx": "js",
+
+  // Python
+  ".py": "python",
+
+  // Java
+  ".java": "java",
+
+  // Go
+  ".go": "go",
+
+  // Rust
+  ".rs": "rust",
+
+  // PHP
+  ".php": "php",
+
+  // Ruby
+  ".rb": "ruby",
+
+  // C#
+  ".cs": undefined,
+
+  // C / C++
+  ".c": "cpp",
+  ".cc": "cpp",
+  ".cpp": "cpp",
+  ".cxx": "cpp",
+  ".h": "cpp",
+  ".hpp": "cpp",
+
+  // Kotlin
+  ".kt": undefined,
+  ".kts": undefined,
+
+  // Swift
+  ".swift": "swift",
+
+  // Scala
+  ".scala": "scala",
+
+  // Dart
+  ".dart": undefined,
+
+  // HTML
+  ".html": "html",
+  ".htm": "html",
+
+  // Markdown
+  ".md": "markdown",
+  ".mdx": "markdown",
+
+  // LaTeX
+  ".tex": "latex",
+
+  // Protocol Buffers
+  ".proto": "proto",
+
+  // SQL
+  ".sql": undefined,
+} 
+
+export const CHUNK_SIZE = 100
+export const CHUNK_OVERLAP = 15
