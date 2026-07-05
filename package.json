@@ -9,9 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@google/genai": "^2.10.0",
     "@langchain/core": "^1.2.1",
     "@langchain/textsplitters": "^1.0.1",
     "axios": "^1.18.1",
+    "compute-cosine-similarity": "^1.1.0",
     "mongoose": "^9.7.2",
     "next": "16.2.9",
     "next-auth": "^4.24.14",

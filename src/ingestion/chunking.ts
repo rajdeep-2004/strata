@@ -6,7 +6,11 @@ import { Document } from "@langchain/core/documents";
 import { CHUNK_OVERLAP, CHUNK_SIZE } from "./ingestionConfig";
 import { getLanguage } from "./getExtension";
 
-export async function getChunks(codeContent: string, filePath: string) {
+export async function getChunks(
+  codeContent: string,
+  filePath: string,
+  githubRepoId: string,
+) {
   const language = getLanguage(filePath);
 
   const splitter = language
@@ -26,6 +30,7 @@ export async function getChunks(codeContent: string, filePath: string) {
     metadata: {
       filePath,
       language,
+      githubRepoId,
     },
   });
 

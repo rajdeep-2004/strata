@@ -2,9 +2,10 @@ import { Repository } from "../models/Repository";
 import { shouldIndexFile } from "./shouldIndexFile";
 import { getFileContent, getRepositoryTree } from "../github/githubClient";
 import { getChunks } from "./chunking";
+import { getEmbeddedChunks } from "../embeddings/getEmbeddedChunks";
 
 export async function ingestionPipeline(repository: Repository) {
-  const { githubRepoOwner, repoName, defaultBranch } = repository;
+  const { githubRepoOwner, repoName, defaultBranch, githubRepoId } = repository;
   const repoTree = await getRepositoryTree(
     githubRepoOwner,
     repoName,
@@ -20,7 +21,7 @@ export async function ingestionPipeline(repository: Repository) {
       repoName,
       node.path,
     );
-    console.log(`[FILE]: ${node.path} : ${fileContent}`);
-    const chunks = await getChunks(fileContent, node.path);
+    const chunks = await getChunks(fileContent, node.path, githubRepoId);
+    const embeddedChunks =  await getEmbeddedChunks(chunks);
   }
 }
