@@ -156,5 +156,5 @@ export const LANGUAGES = {
   ".sql": undefined,
 } 
 
-export const CHUNK_SIZE = 100
+export const CHUNK_SIZE = 500
 export const CHUNK_OVERLAP = 15

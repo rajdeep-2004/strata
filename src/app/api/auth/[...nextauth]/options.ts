@@ -11,7 +11,7 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   callbacks: {
-    async signIn({ user, profile }) {
+    async signIn({ profile, account }) {
       try {
         await dbConnect();
         const exisitingUser = await UserModel.findOne({
@@ -24,8 +24,8 @@ export const authOptions: NextAuthOptions = {
             githubId: profile?.id.toString(),
             githubUsername: profile?.login,
             avatarUrl: profile?.avatar_url,
+            access_token: account?.access_token,
           });
-
           await newUser.save();
         }
 
@@ -49,6 +49,7 @@ export const authOptions: NextAuthOptions = {
             token.githubId = existingUser.githubId;
             token.githubUsername = existingUser.githubUsername;
             token.avatarUrl = existingUser.avatarUrl;
+            token.access_token = existingUser.access_token;
           }
         } catch (error) {
           console.log("[JWT_ERROR]: ", error);
@@ -69,7 +70,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET,
 };

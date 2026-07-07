@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { authOptions } from "../auth/[...nextauth]/options";
 import axios, { isAxiosError } from "axios";
 import { ingestionPipeline } from "@/src/ingestion/ingestionPipeline";
+import { getToken } from "next-auth/jwt";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,6 +15,11 @@ export async function POST(request: NextRequest) {
     const { githubUrl } = await request.json();
     const regex = /github\.com[\/:]["']?([^\/]+)\/([^\s\/.]+)(?:\.git)?/;
     const match = githubUrl.match(regex);
+    const token = await getToken({
+      req: request,
+      secret: process.env.NEXTAUTH_SECRET,
+    });
+    if (!token) throw new Error("Token not found");
     if (!session) {
       return Response.json(
         {
@@ -38,6 +44,11 @@ export async function POST(request: NextRequest) {
     // TODO: Refactor
     const response = await axios.get(
       `https://api.github.com/repos/${githubRepoOwner}/${repoName}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token?.access_token}`,
+        },
+      },
     );
 
     const githubRepo = response.data;
@@ -68,7 +79,7 @@ export async function POST(request: NextRequest) {
     });
 
     // TODO: Remove
-    await ingestionPipeline(repository);
+    await ingestionPipeline(repository, token);
 
     await repository.save();
 

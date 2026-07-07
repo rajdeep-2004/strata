@@ -1,6 +1,6 @@
 export interface EmbeddedChunk {
   id: string;
-  embedding: number[];
+  vector: number[];
   pageContent: string;
   metadata: {
     filePath: string;

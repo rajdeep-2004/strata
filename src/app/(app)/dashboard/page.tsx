@@ -6,11 +6,10 @@ const page = () => {
   // TODO: Remove
   async function testApi() {
     const res = await axios.post("/api/add-repository", {
-      githubUrl: "https://github.com/rajdeep-2004/echo",
+      githubUrl: "https://github.com/rajdeep-2004/music_school_landingPage",
     });
 
     alert("DONE")
-    console.log(res.data);
   }
 
   return (

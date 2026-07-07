@@ -6,6 +6,7 @@ export interface User extends Document {
   githubUsername: string;
   name: string;
   avatarUrl: string;
+  access_token: string;
 }
 const UserSchema: Schema<User> = new Schema({
   name: {
@@ -27,6 +28,9 @@ const UserSchema: Schema<User> = new Schema({
     unique: true,
   },
   avatarUrl: String,
+  access_token: {
+    type: String,
+  },
 });
 
 const UserModel =
