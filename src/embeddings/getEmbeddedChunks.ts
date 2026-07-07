@@ -27,7 +27,7 @@ export async function getEmbeddedChunks(chunks: Document[]) {
         metadata: { ...(chunk.metadata as EmbeddedChunk["metadata"]) },
       });
     }
-    console.log("ONE BATCH EMBEDDED");
+
   }
   return embeddedChunks;
 }

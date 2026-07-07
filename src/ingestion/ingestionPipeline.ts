@@ -15,10 +15,10 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
     defaultBranch,
     token,
   );
-  console.log("REPO TREE MADE");
+
 
   await ensureCollection();
-  console.log("QDRANT CONNECTION ENSURED");
+
 
   const allChunks = [];
 
@@ -35,11 +35,11 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
     const chunks = await getChunks(fileContent, node.path, githubRepoId);
     allChunks.push(...chunks);
   }
-  console.log("ALL CHUNKS MADE");
+
 
     const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0,100)); // TODO: api limit
-    console.log("CHUNKS EMBEDDED");
+
     await storeEmbeddedChunks(embeddedChunks);
-    console.log("EMBEDDINGS STORED");
+
   }
 
