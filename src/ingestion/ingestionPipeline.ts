@@ -37,7 +37,7 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
   }
 
 
-    const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0,100)); // TODO: api limit
+    const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0,80)); // TODO: api limit
 
     await storeEmbeddedChunks(embeddedChunks);
 
