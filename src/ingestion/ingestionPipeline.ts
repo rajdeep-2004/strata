@@ -8,6 +8,9 @@ import { storeEmbeddedChunks } from "../vectorstore/storeEmbeddedChunks";
 import { JWT } from "next-auth/jwt";
 
 export async function ingestionPipeline(repository: Repository, token: JWT) {
+  repository.status = "indexing";
+  repository.indexingStage = "connecting";
+  await repository.save();
   const { githubRepoOwner, repoName, defaultBranch, githubRepoId } = repository;
   const repoTree = await getRepositoryTree(
     githubRepoOwner,
@@ -15,13 +18,12 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
     defaultBranch,
     token,
   );
-
+  repository.indexingStage = "chunking";
+  await repository.save();
 
   await ensureCollection();
 
-
   const allChunks = [];
-
   for (const node of repoTree) {
     if (node.type !== "blob") continue;
     const shouldIndex = shouldIndexFile(node.path);
@@ -36,10 +38,9 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
     allChunks.push(...chunks);
   }
 
+  repository.indexingStage = "embedding";
+  await repository.save();
+  const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0, 80)); // TODO: api limit
 
-    const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0,80)); // TODO: api limit
-
-    await storeEmbeddedChunks(embeddedChunks);
-
-  }
-
+  await storeEmbeddedChunks(embeddedChunks);
+}

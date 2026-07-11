@@ -10,6 +10,8 @@ export interface Repository extends Document {
   githubRepoOwner: string;
   defaultBranch: string;
   lastIndexedAt?: Date;
+  indexingStage?: "connecting" | "chunking" | "embedding" | "storing";
+  languages: string[];
 }
 
 const RepositorySchema: Schema<Repository> = new Schema(
@@ -44,7 +46,11 @@ const RepositorySchema: Schema<Repository> = new Schema(
       type: String,
       enum: ["pending", "indexing", "ready", "failed"],
       required: true,
-      default: "pending"
+      default: "pending",
+    },
+    indexingStage: {
+      type: String,
+      enum: ["connecting", "reading", "embedding", "storing"],
     },
     defaultBranch: {
       type: String,
@@ -52,6 +58,10 @@ const RepositorySchema: Schema<Repository> = new Schema(
     },
     lastIndexedAt: {
       type: Date,
+    },
+    languages: {
+      type: [String],
+      default: [],
     },
   },
   { timestamps: true },

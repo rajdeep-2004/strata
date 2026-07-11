@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
       return Response.json(
         {
           success: false,
-          message: "Unauthorized",
+          message: "Unauthorized Access",
         },
         { status: 401 },
       );
@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     const githubRepoOwner = match[1];
     const repoName = match[2];
 
-    // TODO: Refactor
     const response = await axios.get(
       `https://api.github.com/repos/${githubRepoOwner}/${repoName}`,
       {
@@ -68,6 +67,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const languageObj = await axios.get(
+      `https://api.github.com/repos/${githubRepoOwner}/${repoName}/languages
+`,
+      {
+        headers: {
+          Authorization: `Bearer ${token?.access_token}`,
+        },
+      },
+    );
+    const languages = Object.keys(languageObj);
     const repository = new RepositoryModel({
       userId: session.user._id,
       githubRepoId: githubRepo.id.toString(),
@@ -76,12 +85,15 @@ export async function POST(request: NextRequest) {
       visibility: githubRepo.private ? "private" : "public",
       githubRepoOwner: githubRepo.owner.login,
       defaultBranch: githubRepo.default_branch,
+      status: "pending",
+      languages,
     });
 
-    // TODO: Remove
-    await ingestionPipeline(repository, token);
-
     await repository.save();
+
+    ingestionPipeline(repository, token).catch((error) => {
+      console.log("[REPOSITORY_ADD_ERROR] :", error);
+    });
 
     return Response.json(
       {
@@ -92,15 +104,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.log("[REPOSITORY_ADD_ERROR]: ", error);
-    if (isAxiosError(error)) {
-      return Response.json(
-        {
-          success: false,
-          message: error.message,
-        },
-        { status: error.response?.status ?? 500 },
-      );
-    }
     return Response.json(
       {
         success: false,
