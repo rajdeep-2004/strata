@@ -50,7 +50,7 @@ const RepositorySchema: Schema<Repository> = new Schema(
     },
     indexingStage: {
       type: String,
-      enum: ["connecting", "reading", "embedding", "storing"],
+      enum: ["connecting", "chunking", "embedding", "storing"],
     },
     defaultBranch: {
       type: String,

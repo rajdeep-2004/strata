@@ -41,6 +41,10 @@ export async function ingestionPipeline(repository: Repository, token: JWT) {
   repository.indexingStage = "embedding";
   await repository.save();
   const embeddedChunks = await getEmbeddedChunks(allChunks.slice(0, 80)); // TODO: api limit
-
+  repository.indexingStage = "storing";
+  await repository.save();
   await storeEmbeddedChunks(embeddedChunks);
+  repository.status = "ready";
+  repository.indexingStage = undefined;
+  await repository.save();
 }

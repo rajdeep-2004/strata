@@ -91,8 +91,11 @@ export async function POST(request: NextRequest) {
 
     await repository.save();
 
-    ingestionPipeline(repository, token).catch((error) => {
+    ingestionPipeline(repository, token).catch(async (error) => {
       console.log("[REPOSITORY_ADD_ERROR] :", error);
+      repository.status = "failed";
+      repository.indexingStage = undefined;
+      await repository.save();
     });
 
     return Response.json(
