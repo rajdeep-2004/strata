@@ -1,4 +1,4 @@
-import { Repository } from "../models/Repository";
+import { DBRepository } from "../models/Repository";
 import { shouldIndexFile } from "./shouldIndexFile";
 import { getFileContent, getRepositoryTree } from "../github/githubClient";
 import { getChunks } from "./chunking";
@@ -7,7 +7,7 @@ import ensureCollection from "../vectorstore/ensureCollection";
 import { storeEmbeddedChunks } from "../vectorstore/storeEmbeddedChunks";
 import { JWT } from "next-auth/jwt";
 
-export async function ingestionPipeline(repository: Repository, token: JWT) {
+export async function ingestionPipeline(repository: DBRepository, token: JWT) {
   repository.status = "indexing";
   repository.indexingStage = "connecting";
   await repository.save();

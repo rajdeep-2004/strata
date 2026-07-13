@@ -1,6 +1,6 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface Repository extends Document {
+export interface DBRepository extends Document {
   userId: Types.ObjectId;
   githubRepoId: string;
   githubRepoUrl: string;
@@ -14,7 +14,7 @@ export interface Repository extends Document {
   languages: string[];
 }
 
-const RepositorySchema: Schema<Repository> = new Schema(
+const RepositorySchema: Schema<DBRepository> = new Schema(
   {
     userId: {
       type: Schema.Types.ObjectId,
@@ -70,7 +70,7 @@ const RepositorySchema: Schema<Repository> = new Schema(
 RepositorySchema.index({ userId: 1, githubRepoId: 1 }, { unique: true });
 
 const RepositoryModel =
-  (mongoose.models.Repository as mongoose.Model<Repository>) ||
-  mongoose.model<Repository>("Repository", RepositorySchema);
+  (mongoose.models.Repository as mongoose.Model<DBRepository>) ||
+  mongoose.model<DBRepository>("Repository", RepositorySchema);
 
 export default RepositoryModel;

@@ -7,13 +7,8 @@ import { useForm } from "react-hook-form";
 import axios from "axios";
 import Sidebar from "@/components/dashboard/Sidebar";
 import RepositoryCard from "@/components/dashboard/RepositoryCard";
+import type { Repository } from "@/src/types/repository";
 
-import type { Repository as DBRepository } from "@/src/models/Repository";
-import type { Document } from "mongoose";
-
-type Repository = Omit<DBRepository, keyof Document> & {
-  _id: string;
-};
 
 import { addGithubUrlSchema } from "@/src/validations/addGithubUrlSchema";
 import { zodResolver } from "@hookform/resolvers/zod";

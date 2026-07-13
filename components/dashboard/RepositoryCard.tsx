@@ -22,7 +22,7 @@ export default function RepositoryCard({ repo, onRetry }: RepositoryCardProps) {
 
   return (
     <div
-      onClick={() => router.push(`/repositories/${repo._id}`)}
+      onClick={() => router.push(`/repositories/${repo._id}/chat`)}
       className={`bg-surface border rounded-[16px] p-6 transition-colors group flex flex-col h-full bg-gradient-to-b from-[#161618] to-[#0B0B0C] relative overflow-hidden cursor-pointer ${
         repo.status === "failed" ? "border-error-container" : "border-outline-variant hover:border-outline"
       }`}
