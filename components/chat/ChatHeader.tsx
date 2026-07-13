@@ -1,5 +1,6 @@
 "use client";
 
+import { STATUS_COLOURS } from "@/constants/chat";
 import type { Repository } from "@/src/types/repository";
 
 interface ChatHeaderProps {
@@ -8,14 +9,8 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ repository, onBack }: ChatHeaderProps) {
-  const statusColors = {
-    ready: "bg-surface-container-highest text-on-surface border-outline-variant/50",
-    indexing: "bg-surface-container-low text-inverse-primary border-outline-variant/50 animate-pulse font-semibold",
-    pending: "bg-surface-container-highest text-outline border-outline-variant/50",
-    failed: "bg-error-container/20 text-error border-error/30",
-  };
 
-  const statusIndicators = {
+  const STATUS_INDICATORS = {
     ready: <span className="w-1.5 h-1.5 rounded-full bg-surface-tint mr-1.5"></span>,
     indexing: <span className="material-symbols-outlined mr-1 animate-spin text-[14px]">sync</span>,
     pending: null,
@@ -36,8 +31,8 @@ export default function ChatHeader({ repository, onBack }: ChatHeaderProps) {
         <div className="flex flex-col text-left">
           <span className="font-semibold text-[15px] text-on-surface flex items-center gap-2">
             {repository.repoName}
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] border capitalize ${statusColors[repository.status]}`}>
-              {statusIndicators[repository.status]}
+            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] border capitalize ${STATUS_COLOURS[repository.status]}`}>
+              {STATUS_INDICATORS[repository.status]}
               {repository.status === "indexing"
                 ? `Indexing: ${repository.indexingStage || "starting"}`
                 : repository.status}
