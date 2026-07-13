@@ -1,4 +1,4 @@
-# Strata
+# Strata (v1)
 
 ### AI-Powered Codebase & Documentation Knowledge Assistant
 
