@@ -38,6 +38,8 @@ export default function ChatClient({ repository, initialMessages, sessionUser }:
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
+    if (repository.status !== "ready") return;
+
     const queryText = input.trim();
     if (!queryText || isSending) return;
 
