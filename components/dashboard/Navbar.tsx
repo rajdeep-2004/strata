@@ -1,8 +1,8 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import LogoutButton from "./LogoutButton";
-import LoginButton from "./LoginButton";
+import LogoutButton from "../auth/LogoutButton";
+import LoginButton from "../auth/LoginButton";
 
 const Navbar = () => {
   const { data: session } = useSession();

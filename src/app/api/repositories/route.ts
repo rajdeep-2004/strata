@@ -1,6 +1,5 @@
 import dbConnect from "@/src/lib/dbConnect";
 import RepositoryModel from "@/src/models/Repository";
-import mongoose from "mongoose";
 import { getServerSession } from "next-auth";
 import { NextRequest } from "next/server";
 import { authOptions } from "../auth/[...nextauth]/options";
@@ -76,7 +75,7 @@ export async function POST(request: NextRequest) {
         },
       },
     );
-    const languages = Object.keys(languageObj);
+    const languages = Object.keys(languageObj.data);
     const repository = new RepositoryModel({
       userId: session.user._id,
       githubRepoId: githubRepo.id.toString(),
@@ -114,5 +113,46 @@ export async function POST(request: NextRequest) {
       },
       { status: 500 },
     );
+  }
+}
+
+export async function GET() {
+  try {
+    await dbConnect()
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return Response.json(
+        {
+          success: false,
+          message: "UnAuthorized Access",
+        },
+        { status: 401 },
+      );
+    }
+    const connectedRepositories = await RepositoryModel.find({
+      userId: session.user._id,
+    }).select([
+      "githubRepoUrl",
+      "repoName",
+      "visibility",
+      "status",
+      "indexingStage",
+      "defaultBranch",
+      "lastIndexedAt",
+      "languages"
+    ]);
+    return Response.json(
+      {
+        success: true,
+        data: connectedRepositories,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    console.log("[GET_REPOSITORIES_ERROR]: ", error);
+    return Response.json({
+      success: false,
+      message: "Internal Server Error"
+    }, { status: 500 })
   }
 }
