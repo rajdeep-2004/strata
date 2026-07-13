@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import MessageBubble from "./MessageBubble";
 import type { Message } from "@/src/types/message";
 

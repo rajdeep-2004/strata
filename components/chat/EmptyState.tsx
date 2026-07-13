@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+
 import type { Repository } from "@/src/types/repository";
 
 interface EmptyStateProps {

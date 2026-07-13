@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import type { Message } from "@/src/types/message";
 
 interface MessageBubbleProps {
