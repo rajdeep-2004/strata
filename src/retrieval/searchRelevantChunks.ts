@@ -20,7 +20,6 @@ export async function searchRelevantChunks(
     with_payload: true,
     limit: 5,
   });
-
   return response.points.map((chunk) => ({
     score: chunk.score,
     payload: chunk.payload,

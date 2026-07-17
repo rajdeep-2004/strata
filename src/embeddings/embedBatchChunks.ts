@@ -1,19 +1,11 @@
-import { GoogleGenAI } from "@google/genai";
 import { Document } from "@langchain/core/documents";
-const ai = new GoogleGenAI({});
+import { Ollama } from "ollama";
+import { OllamaService } from "./ollama";
+const ollama = new Ollama();
 
 export async function embedBatchChunks(batchChunks: Document[]) {
-  const chunkContents = batchChunks.map((chunk) => ({
-    parts: [{ text: chunk.pageContent }],
-  }));
+  const chunkContents = batchChunks.map((chunk) => chunk.pageContent);
+  const embeddedBatchChunks = await OllamaService(chunkContents);
 
-  const response = await ai.models.embedContent({
-    model: "gemini-embedding-2",
-    contents: chunkContents,
-  });
-  if (!response.embeddings) throw new Error("Error fetching the embeddings");
-
-  const embeddedBatchChunks = response.embeddings.map((embed) => embed.values);
-
-  return embeddedBatchChunks;
+  return embeddedBatchChunks.embeddings;
 }

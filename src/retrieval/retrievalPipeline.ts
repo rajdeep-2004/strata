@@ -1,6 +1,6 @@
 import { buildContext } from "./buildContext";
 import { buildPrompt } from "./buildPrompt";
-import { embedQuery } from "./embedQuery";
+import { embedQuery } from "../embeddings/embedQuery";
 import { generateAnswer } from "./generateAnswer";
 import { searchRelevantChunks } from "./searchRelevantChunks";
 import { RelevantChunk } from "./types";
@@ -8,7 +8,7 @@ import { RelevantChunk } from "./types";
 export async function retrievalPipeline(query: string, githubRepoId: string) {
   const embeddedQuery = await embedQuery(query);
   const relevantChunks = await searchRelevantChunks(
-    embeddedQuery!,
+    embeddedQuery,
     githubRepoId,
   );
   const context = buildContext(relevantChunks as RelevantChunk[]);
