@@ -1,18 +1,22 @@
 import { buildContext } from "./buildContext";
 import { buildPrompt } from "./buildPrompt";
-import { embedQuery } from "../embeddings/embedQuery";
+import { embedQuery } from "./embedQuery";
 import { generateAnswer } from "./generateAnswer";
+import { NO_CONTEXT_ANSWER } from "./retrievalConfig";
 import { searchRelevantChunks } from "./searchRelevantChunks";
-import { RelevantChunk } from "./types";
 
 export async function retrievalPipeline(query: string, githubRepoId: string) {
   const embeddedQuery = await embedQuery(query);
+  if (!embeddedQuery) throw new Error("Query embedding is empty");
+
   const relevantChunks = await searchRelevantChunks(
     embeddedQuery,
     githubRepoId,
   );
-  const context = buildContext(relevantChunks as RelevantChunk[]);
+  // Skip the LLM call when nothing relevant came back: it can only guess.
+  if (relevantChunks.length === 0) return NO_CONTEXT_ANSWER;
+
+  const context = buildContext(relevantChunks);
   const prompt = buildPrompt(context, query);
-  const answer = await generateAnswer(prompt);
-  return answer;
+  return generateAnswer(prompt);
 }

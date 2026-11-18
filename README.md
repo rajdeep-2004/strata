@@ -1,412 +1,359 @@
-# Strata (v1)
-
-### AI-Powered Codebase & Documentation Knowledge Assistant
-
-Strata is an engineering tool designed to streamline repository navigation and accelerate developer onboarding. By connecting to public or private GitHub repositories, Strata extracts file trees, parses source code with language-aware text splitters, and produces dense vector embeddings. Through Retrieval-Augmented Generation (RAG) and the Google Gemini API, developers can run semantic natural language queries against their codebase and receive answers grounded directly in their source files.
-
----
-
 <div align="center">
 
-[![Next.js 16](https://img.shields.io/badge/Next.js-16.2.9-black.svg?style=flat-square)](https://nextjs.org/)
-[![React 19](https://img.shields.io/badge/React-19.2.4-blue.svg?style=flat-square)](https://react.dev/)
-[![TypeScript 5](https://img.shields.io/badge/TypeScript-5-blue.svg?style=flat-square)](https://www.typescriptlang.org/)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Database-green.svg?style=flat-square)](https://www.mongodb.com/)
-[![Gemini](https://img.shields.io/badge/Gemini-AI--Model-orange.svg?style=flat-square)](https://deepmind.google/technologies/gemini/)
-[![Qdrant](https://img.shields.io/badge/Qdrant-VectorDB-red.svg?style=flat-square)](https://qdrant.tech/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-lightgrey.svg?style=flat-square)](LICENSE)
+# Strata
 
-[Architecture](#architecture) • [Getting Started](#getting-started) • [API Overview](#api-overview) • [Database Models](#database-models) • [Engineering Decisions](#engineering-decisions)
+**Ask your codebase anything. Get answers with file and line citations.**
+
+Strata indexes a GitHub repository into a vector database and answers natural-language questions about it with retrieval-augmented generation (RAG). Every answer is grounded in your source code and points to the exact lines it came from.
+
+[![Next.js](https://img.shields.io/badge/Next.js-16.2-000000?style=flat-square&logo=nextdotjs)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19.2-61DAFB?style=flat-square&logo=react&logoColor=black)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Gemini](https://img.shields.io/badge/Google-Gemini-4285F4?style=flat-square&logo=googlegemini&logoColor=white)](https://ai.google.dev/)
+[![Qdrant](https://img.shields.io/badge/Qdrant-Vector%20DB-DC244C?style=flat-square)](https://qdrant.tech/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose-47A248?style=flat-square&logo=mongodb&logoColor=white)](https://mongoosejs.com/)
+
+[How it works](#how-it-works) · [Quick start](#quick-start) · [Architecture](#architecture) · [API](#api-reference) · [Design decisions](#design-decisions) · [Limitations](#known-limitations) · [Roadmap](#roadmap)
+
+![Strata chat interface](docs/previews/chat.png)
 
 </div>
 
 ---
 
-## Problem Statement
+## Why Strata
 
-When onboarding to a new codebase or examining an unfamiliar repository, developers face significant friction:
-* **High Cognitive Load**: Understanding structural flows, architectural divisions, or tracing an API request path requires manually scanning hundreds of files.
-* **Lexical Limitations**: Standard keyword search and `grep` fail to capture semantic context. Searching for terms like "authorization" will miss code referencing "authOptions", "jwt checks", or "session validators".
-* **Onboarding Friction**: Explaining repository structure, configuration layouts, and pattern conventions takes up valuable time from senior engineering resources.
+Joining a new codebase is slow. You trace one request across a dozen files, `grep` for `auth` and miss `authOptions`, `getToken` and `proxy.ts`, and end up asking a senior engineer questions the code could have answered.
 
----
+Strata turns the repository into something you can talk to:
 
-## Solution
-
-Strata creates a local semantic interface to any repository. By translating code files into chunked semantic vector spaces, it allows developers to interact with the repository using natural language questions:
-* **Direct Context Mapping**: Queries are mapped against code vectors to extract matching functions, classes, and comments.
-* **Source-Grounded Answers**: LLM answers are generated based solely on the retrieved codebase chunks, reducing hallucinations.
-* **Immediate Context Referral**: Responses reference actual source files, letting developers click and navigate straight to the destination lines.
-
----
-
-## Product Overview
-
-Strata runs a background orchestration pipeline to process repository files. The developer logs in using GitHub OAuth, adds a repository URL, and waits for background indexing to complete. Once indexed, the repository's chat becomes active, allowing multi-turn conversations about the codebase.
-
-```
-[GitHub OAuth] ──► [Connect Repository] ──► [Background Ingestion] ──► [Interactive Code Chat]
-```
-
----
-
-## Screenshots
-
-### Landing Page
-*Welcome page describing Strata's capabilities and providing GitHub OAuth login initiation.*
-
-![Landing Page](docs/previews/landing.png)
-
-### Dashboard
-*Allows developers to view their connected codebases, check indexing status, and add new repositories.*
-
-![Dashboard](docs/previews/dashboard.png)
-
-### Chat Interface
-*Interactive chat terminal with session-based persistent memory. Validates index state before enabling input.*
-
-![Chat Interface](docs/previews/chat.png)
-
----
+- **Semantic, not lexical.** Questions are matched by meaning, so "where do we check if a user is logged in?" finds the session code even when none of those words appear in it.
+- **Grounded answers.** The model is told to answer only from retrieved code. When the code is not there, it says what is missing instead of guessing.
+- **Cited to the line.** Answers reference sources as `src/lib/dbConnect.ts:L8-L20`, so every claim can be checked.
+- **Private repos work.** Strata reads code through your GitHub OAuth token, so it can index any repository you can access.
 
 ## Features
 
-### Authentication & Sessions
-* **GitHub OAuth Providers**: Integrates via NextAuth.js.
-* **JWT Client Sessions**: Credentials and profile assets (avatars, tokens) are passed securely to Route Handlers and Server Actions.
+| | |
+| :--- | :--- |
+| **GitHub sign-in** | One-click OAuth via NextAuth. Your token is used to read repositories you have access to. |
+| **Repository indexing** | Paste a GitHub URL. Strata fetches the file tree, filters out binaries, lockfiles and build output, chunks the code and stores embeddings. |
+| **Live indexing status** | Each repository moves through `pending` → `indexing` → `ready` / `failed`, with a visible stage: `connecting`, `chunking`, `embedding`, `storing`. |
+| **Retry on failure** | A failed index can be re-run from the dashboard. Deterministic vector IDs make re-runs overwrite rather than duplicate. |
+| **Language-aware chunking** | Code is split along language boundaries (functions, classes, blocks) for JS/TS, Python, Go, Rust, Java, C/C++, Ruby, PHP, Swift, Scala, HTML, Markdown and more. |
+| **Cited, formatted answers** | Responses render as Markdown (lists, tables, code blocks) with inline `file:line` citations. |
+| **Persistent chat history** | Every question and answer is saved per repository. |
+| **Chat gated on readiness** | The input stays locked until the repository index is `ready`. |
 
-### Repository Syncing & Pipelines
-* **Public/Private Repo Access**: Resolves GitHub REST API requests using OAuth authorization headers.
-* **Interactive State Engine**: Tracks repository progress using states (`pending`, `indexing`, `ready`, `failed`) and stages (`connecting`, `chunking`, `embedding`, `storing`).
-* **Non-Blocking Execution**: Invokes ingestion pipelines asynchronously, avoiding Gateway Timeout constraints.
-* **Index Retry Mechanism**: Allows developers to re-trigger failed repository indexing pipelines directly from the dashboard.
+<table>
+  <tr>
+    <td><img src="docs/previews/landing.png" alt="Landing page" /></td>
+    <td><img src="docs/previews/dashboard.png" alt="Repository dashboard" /></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Landing page</sub></td>
+    <td align="center"><sub>Repository dashboard with indexing status</sub></td>
+  </tr>
+</table>
 
-### Vector Storage & Code Retrieval
-* **Syntax-Aware Chunking**: Splits files using AST parser-rules (via LangChain's `RecursiveCharacterTextSplitter.fromLanguage`) for supported languages, preserving function boundaries.
-* **Dense Vectors**: Generates 3072-dimension vectors with Google's `gemini-embedding-2` model.
-* **User Isolation Payloads**: Restricts similarity queries in Qdrant with filters on `githubRepoId` to prevent cross-tenant queries.
-* **Grounded Answer Engines**: Forms codebase context using nearest-neighbor matches and completes requests using `gemini-3.1-flash-lite`.
+## How it works
 
-### UX Safeguards
-* **Locked Input State**: Automatically disables chat inputs unless a repository's status is `ready` to prevent querying incomplete indexes.
-* **Autoscroll Message Logs**: Scroll locks the message containers dynamically as queries complete.
+Strata has two pipelines: one that **indexes** a repository once, and one that **answers** each question.
 
----
+### 1. Indexing
+
+```mermaid
+flowchart LR
+    A[GitHub URL] --> B[Fetch file tree<br/>GitHub REST API]
+    B --> C{Indexable?}
+    C -- binary, lockfile,<br/>build dir --> X[Skip]
+    C -- source file --> D[Download content]
+    D --> E[Language-aware split<br/>1500 chars, 200 overlap]
+    E --> F[Embed in batches of 10<br/>gemini-embedding-2, 3072-d]
+    F --> G[(Qdrant<br/>upsert by UUID v5)]
+    G --> H[Mark repository ready]
+```
+
+1. **Connect.** The repository record is created in MongoDB as `pending`, and the API responds immediately. Indexing continues in the background.
+2. **Filter.** The recursive Git tree is walked. Directories like `node_modules`, `.next` and `dist`, binary and media extensions, and lockfiles are skipped (`src/ingestion/ingestionConfig.ts`).
+3. **Chunk.** Each file is split with LangChain's `RecursiveCharacterTextSplitter.fromLanguage`, which prefers to break at function and class boundaries. Each chunk keeps its file path, language, chunk index and line range.
+4. **Embed.** Chunks are embedded with `gemini-embedding-2` in batches of 10.
+5. **Store.** Vectors and their payload are upserted into the Qdrant collection `embeddedCode`. A keyword index on `githubRepoId` keeps per-repository filtering fast.
+
+### 2. Answering
+
+```mermaid
+flowchart LR
+    Q[Question] --> E[Embed query<br/>gemini-embedding-2]
+    E --> S[(Qdrant search<br/>filter: githubRepoId<br/>top 12, score ≥ 0.3)]
+    S -->|no matches| N[Return 'not found'<br/>no LLM call]
+    S -->|matches| C[Build context<br/>grouped by file,<br/>ordered by line]
+    C --> L[Gemini 3.1 Flash Lite<br/>system instruction]
+    L --> A[Cited Markdown answer]
+```
+
+1. The question is embedded with the same model used for indexing.
+2. Qdrant returns the 12 most similar chunks **from this repository only**, dropping anything below a 0.3 similarity score.
+3. If nothing relevant comes back, Strata returns a fixed "not found" message and skips the LLM call entirely: no tokens spent on a guess.
+4. Otherwise, chunks are grouped by file, ordered by position in the file and labelled with line ranges, so the model reads coherent code instead of shuffled fragments.
+5. `gemini-3.1-flash-lite` answers under a system instruction that requires grounding, cross-file reasoning, `file:line` citations and an honest "what's missing" note for partial answers.
 
 ## Architecture
 
-Strata is designed as a modular full-stack application built around the Next.js App Router.
-
 ```mermaid
 graph TD
-    Client[Client Browser]
-    NextServer[Next.js 16 Server]
-    Mongo[MongoDB Database]
-    Qdrant[Qdrant Vector DB]
-    GitHubAPI[GitHub REST API]
-    GeminiAPI[Google Gemini API]
+    Browser[Browser<br/>React 19 client components]
+    subgraph Next[Next.js 16 App Router]
+        Pages[Server pages<br/>dashboard, chat]
+        Actions[Server Actions<br/>save messages]
+        API[Route handlers<br/>/api/repositories/*]
+        Ingest[Ingestion pipeline]
+        RAG[Retrieval pipeline]
+    end
+    GitHub[GitHub REST API]
+    Gemini[Google Gemini API]
+    Mongo[(MongoDB<br/>users, repositories, messages)]
+    Qdrant[(Qdrant<br/>code embeddings)]
 
-    %% Ingestion Flow
-    Client -->|1. Connect Repository| NextServer
-    NextServer -->|2. Create 'pending' Record| Mongo
-    NextServer -->|3. Dispatch Ingestion Pipeline| NextServer
-    NextServer -->|4. Fetch Repo Tree & Files| GitHubAPI
-    NextServer -->|5. Chunk Code Files| NextServer
-    NextServer -->|6. Batch Embed Chunk Contents| GeminiAPI
-    NextServer -->|7. Upsert Vector Records| Qdrant
-    NextServer -->|8. Set Status to 'ready'| Mongo
-
-    %% Chat Flow
-    Client -->|9. Post Question| NextServer
-    NextServer -->|10. Embed Query Text| GeminiAPI
-    NextServer -->|11. Similarity Lookup| Qdrant
-    NextServer -->|12. Generate Grounded Answer| GeminiAPI
-    NextServer -->|13. Log Thread Messages| Mongo
-    NextServer -->|14. Render Answer| Client
+    Browser --> Pages
+    Browser --> API
+    Browser --> Actions
+    API --> Ingest
+    API --> RAG
+    Ingest --> GitHub
+    Ingest --> Gemini
+    Ingest --> Qdrant
+    Ingest --> Mongo
+    RAG --> Gemini
+    RAG --> Qdrant
+    Actions --> Mongo
+    Pages --> Mongo
 ```
 
-### Data Pipeline Lifecycle
+### Tech stack
 
-#### 1. Repository Indexing Pipeline
-```mermaid
-flowchart TD
-    Start([Trigger Ingestion]) --> DBIndexing[Set Status: indexing]
-    DBIndexing --> FetchTree[Fetch GitHub Tree]
-    FetchTree --> ExcludeFiles{Exclude File?}
-    ExcludeFiles -->|Yes| Skip[Skip File]
-    ExcludeFiles -->|No| Download[Download Blob Content]
-    Download --> Split[Split into Chunks]
-    Split --> Embed[Generate Embeddings - gemini-embedding-2]
-    Embed --> Store[Store Vectors - Qdrant]
-    Store --> DBReady[Set Status: ready]
-    DBReady --> End([Done])
-```
-
-#### 2. RAG Query Lifecycle
-```mermaid
-flowchart TD
-    Input([User Query]) --> EmbedQuery[Embed Query String]
-    EmbedQuery --> QdrantQuery[Search Qdrant DB]
-    QdrantQuery --> Filter[Filter by githubRepoId]
-    Filter --> Match[Retrieve Top Chunks]
-    Match --> Prompt[Assemble Context Prompt]
-    Prompt --> GenAnswer[Invoke Gemini LLM]
-    GenAnswer --> Save[Save Dialogue to Mongo]
-    Save --> Return[Return Response to UI]
-```
-
----
-
-## Tech Stack
-
-### Core Framework
-| Dependency | Version | Purpose |
+| Layer | Choice | Why |
 | :--- | :--- | :--- |
-| **Next.js** | `16.2.9` | Full-stack meta-framework, App Router, Route Handlers. |
-| **React** | `19.2.4` | Component framework and React Server Actions. |
-| **TypeScript**| `^5` | Strict static type definitions. |
-| **TailwindCSS**| `^4` | Utility classes and styling definitions. |
+| Framework | **Next.js 16** (App Router), **React 19**, **TypeScript 5** | One deployable for UI, API routes and server actions. |
+| Styling | **Tailwind CSS 4** | Utility-first, no runtime cost. |
+| Auth | **NextAuth v4** with GitHub OAuth | The GitHub token doubles as API access for private repositories. |
+| App data | **MongoDB** via Mongoose | Flexible documents for users, repository state and chat logs. |
+| Vector store | **Qdrant Cloud** | Purpose-built ANN search with native payload filtering. |
+| Embeddings | **`gemini-embedding-2`** (3072 dimensions) | High-quality code and text embeddings from the same provider as the LLM. |
+| Generation | **`gemini-3.1-flash-lite`** | Fast and cheap enough for interactive chat. |
+| Chunking | **LangChain text splitters** | Language-aware separators for 15+ languages. |
+| Rendering | **react-markdown** + **remark-gfm** | Formatted answers; raw HTML is never rendered. |
 
-### Data & Databases
-| Dependency | Version | Purpose |
-| :--- | :--- | :--- |
-| **Mongoose** | `^9.7.2` | MongoDB object modeling and document validation. |
-| **Qdrant Client** | `^1.18.0` | Node.js interface client for Qdrant Vector database operations. |
-
-### Semantic Engines & Utilities
-| Dependency | Version | Purpose |
-| :--- | :--- | :--- |
-| **`@google/genai`** | `^2.10.0` | Official Google SDK for Gemini LLMs and embedding systems. |
-| **`@langchain/core`** | `^1.2.1` | Baseline interfaces for document structures and chains. |
-| **`@langchain/textsplitters`**| `^1.0.1` | Language-aware code chunk segmentation. |
-| **`next-auth`** | `^4.24.14` | GitHub OAuth session validation provider. |
-| **`axios`** | `^1.18.1` | REST calls communicating with the GitHub API. |
-| **`uuid`** | `^14.0.1` | Unique ID generation (UUID v5) for vector deduplication. |
-
----
-
-## Project Structure
+### Project structure
 
 ```text
 strata/
-├── components/                  # Client-side UI Components
-│   ├── auth/                    # OAuth login controls
-│   ├── chat/                    # Messaging client (ChatInput, MessageList, EmptyState)
-│   └── dashboard/               # Dashboards, cards, modals, navigation headers
-├── src/
-│   ├── app/                     # Next.js App routing
-│   │   ├── (app)/               # Authenticated page boundaries (dashboard, chat)
-│   │   └── api/                 # Endpoint handlers (NextAuth, chat engines, reindexing APIs)
-│   ├── context/                 # Context Providers (Session wrappers)
-│   ├── embeddings/              # Batch wrapper tools for Google Gemini Embeddings
-│   ├── github/                  # API clients retrieving file contents and tree listings
-│   ├── ingestion/               # Pipeline modules handling files and syntax splitting
-│   ├── lib/                     # Database client initializers (dbConnect)
-│   ├── models/                  # Mongoose document schema validation definitions
-│   ├── retrieval/               # Core RAG functions (search, prompt parsing, generation)
-│   ├── types/                   # TypeScript interfaces
-│   ├── validations/             # Request payload constraints
-│   └── vectorstore/             # Vector connection builders and metadata indexes
-├── package.json                 # Node modules definitions
-├── tsconfig.json                # TypeScript compiler specifications
-└── next.config.ts               # Next.js configurations
+├── components/            # Client UI: auth, chat, dashboard
+│   └── chat/              # MessageList, MessageBubble, MarkdownMessage, ChatInput
+├── constants/             # Static UI constants
+├── docs/previews/         # README screenshots
+└── src/
+    ├── app/
+    │   ├── (app)/         # Authenticated pages: dashboard, repositories, chat
+    │   └── api/           # Route handlers: auth, repositories, chat, reindex
+    ├── embeddings/        # Batch embedding + deterministic chunk IDs
+    ├── github/            # GitHub tree and file-content client
+    ├── ingestion/         # Pipeline, file filtering, chunking, config
+    ├── retrieval/         # Query embedding, search, context, prompt, generation
+    ├── vectorstore/       # Qdrant client, collection setup, upserts
+    ├── models/            # Mongoose schemas: User, Repository, Message
+    ├── validations/       # Zod schemas for request input
+    ├── lib/               # MongoDB connection
+    └── proxy.ts           # Route guard: redirects by session state
 ```
 
----
-
-## Getting Started
+## Quick start
 
 ### Prerequisites
-* **Node.js** v18 or higher
-* **MongoDB** instance
-* **Qdrant** DB endpoint
 
-### Setup Steps
+- **Node.js 20+**
+- A **MongoDB** database (local or Atlas)
+- A **Qdrant** cluster ([Qdrant Cloud](https://cloud.qdrant.io/) free tier works)
+- A **Gemini API key** from [Google AI Studio](https://aistudio.google.com/apikey)
+- A **GitHub OAuth App** ([create one](https://github.com/settings/developers)) with callback URL `http://localhost:3000/api/auth/callback/github`
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/rajdeep-2004/strata.git
-   cd strata
-   ```
+### 1. Install
 
-2. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+```bash
+git clone https://github.com/rajdeep-2004/strata.git
+cd strata
+npm install
+```
 
-3. **Configure Environment Variables**
-   Create a `.env.local` file in the root directory:
-   ```env
-   MONGO_URI="mongodb://localhost:27017/strata"
-   GITHUB_ID="your_github_oauth_client_id"
-   GITHUB_SECRET="your_github_oauth_client_secret"
-   NEXTAUTH_SECRET="your_nextauth_signing_secret"
-   GEMINI_API_KEY="your_google_gemini_api_key"
-   NAMESPACE="your_uuid_v5_namespace_uuid"
-   QDRANT_URL="https://your-qdrant-cluster.io"
-   QDRANT_API_KEY="your_qdrant_db_api_key"
-   ```
+### 2. Configure
 
-4. **Run the Development Server**
-   ```bash
-   npm run dev
-   ```
-   Open [http://localhost:3000](http://localhost:3000) to view the application.
+Create a `.env` file in the project root:
 
-5. **Build for Production**
-   ```bash
-   npm run build
-   npm run start
-   ```
+```env
+# MongoDB
+MONGO_URI="mongodb+srv://<user>:<password>@<cluster>/strata"
 
----
+# GitHub OAuth (NextAuth)
+GITHUB_ID="<oauth-client-id>"
+GITHUB_SECRET="<oauth-client-secret>"
+NEXTAUTH_SECRET="<random-32-byte-string>"   # openssl rand -base64 32
 
-## Environment Variables
+# Google Gemini (embeddings + answers)
+GEMINI_API_KEY="<gemini-api-key>"
 
-| Variable | Description | Requirement |
-| :--- | :--- | :--- |
-| **`MONGO_URI`** | The connection string target for your MongoDB deployment database. | Required |
-| **`GITHUB_ID`** | The Client ID identifier generated when creating your OAuth App on GitHub. | Required |
-| **`GITHUB_SECRET`** | The Client Secret key generated for OAuth authentication on GitHub. | Required |
-| **`NEXTAUTH_SECRET`** | Used by NextAuth to sign, encrypt, and secure cookies and session tokens. | Required |
-| **`GEMINI_API_KEY`** | Google Gen AI token used to access `gemini-embedding-2` and `gemini-3.1-flash-lite`. | Required |
-| **`NAMESPACE`** | A static UUID string used by UUID v5 to calculate deterministic vector keys. | Required |
-| **`QDRANT_URL`** | The endpoint location target pointing to your Qdrant Vector database cluster. | Required |
-| **`QDRANT_API_KEY`** | Authorization token allowing writes and searches on your Qdrant vector store. | Required |
+# Qdrant
+QDRANT_URL="https://<cluster-id>.<region>.cloud.qdrant.io:6333"
+QDRANT_API_KEY="<qdrant-api-key>"
 
----
+# UUID v5 namespace for deterministic vector IDs
+NAMESPACE="<any-uuid>"                       # node -e "console.log(crypto.randomUUID())"
+```
 
-## API Overview
+| Variable | Used for |
+| :--- | :--- |
+| `MONGO_URI` | MongoDB connection string. |
+| `GITHUB_ID`, `GITHUB_SECRET` | GitHub OAuth app credentials. |
+| `NEXTAUTH_SECRET` | Signs and encrypts session JWTs. |
+| `GEMINI_API_KEY` | Read automatically by `@google/genai` for embeddings and generation. |
+| `QDRANT_URL`, `QDRANT_API_KEY` | Qdrant cluster endpoint and key. |
+| `NAMESPACE` | UUID v5 namespace for chunk IDs. **Keep it fixed**: changing it orphans existing vectors. |
 
-### `POST /api/repositories`
-Registers a repository in MongoDB, fetches metadata and languages, and initiates the ingestion pipeline asynchronously.
-* **Payload**: `{ githubUrl: string }`
-* **Response**: `201 Created` on registration.
+> [!IMPORTANT]
+> `.env` is gitignored. Never commit it. On Vercel, set the same variables in **Project → Settings → Environment Variables** and redeploy, because env changes only apply to new deployments.
 
-### `GET /api/repositories`
-Retrieves all repository records linked to the active session user's Mongoose ID.
-* **Response**: `200 OK` with JSON array of metadata.
+### 3. Run
 
-### `POST /api/repositories/[repoId]/chat`
-Processes codebase queries. Runs a vector similarity lookup against Qdrant, builds a context-enhanced prompt, and calls Gemini for a response.
-* **Payload**: `{ query: string, githubRepoId: string }`
-* **Response**: `200 OK` with `{ success: true, answer: string }`.
+```bash
+npm run dev        # http://localhost:3000
+```
 
-### `POST /api/repositories/[repoId]/reindex`
-Resets a failed repository record's state to `pending` and re-triggers the asynchronous ingestion pipeline.
-* **Payload**: `{ repositoryId: string }`
-* **Response**: `200 OK` with `{ success: true, message: "Retry indexing initiated" }`.
+Sign in with GitHub, add a repository URL, wait for the status to turn **ready**, then open the chat.
 
----
+### Scripts
 
-## Database Models
+| Command | What it does |
+| :--- | :--- |
+| `npm run dev` | Start the dev server. |
+| `npm run build` | Production build. |
+| `npm run start` | Serve the production build. |
+| `npm run lint` | Run ESLint. |
 
-Strata defines three primary database collections using Mongoose schemas:
+## API reference
 
-### 1. User (`UserModel`)
-Tracks authenticated user details and GitHub API tokens:
-* `githubId` (String, Unique, Required): User's GitHub profile identifier.
-* `githubUsername` (String, Required): GitHub username.
-* `email` (String, Unique, Required, Lowercase): Account email.
-* `name` (String): User's display name.
-* `avatarUrl` (String): Link to user's GitHub avatar.
-* `access_token` (String): Active OAuth access token.
+All endpoints return JSON. Session-protected endpoints return `401` without a valid NextAuth session.
 
-### 2. Repository (`RepositoryModel`)
-Stores state and metadata for registered codebases:
-* `userId` (ObjectId, Ref: User, Required): Owner identifier.
-* `githubRepoId` (String, Required): GitHub Repository ID.
-* `githubRepoUrl` (String, Required): Repository clone URL.
-* `repoName` (String, Required): Display name.
-* `githubRepoOwner` (String, Required): Organization/User username.
-* `visibility` (Enum: public/private, Required): Repository privacy classification.
-* `status` (Enum: pending/indexing/ready/failed, Default: pending): Processing state.
-* `indexingStage` (Enum: connecting/chunking/embedding/storing): Stage within ingestion.
-* `defaultBranch` (String, Required): Target branch.
-* `languages` (Array of Strings): Identified coding languages.
-* `lastIndexedAt` (Date): Timestamp of last indexing run.
-* *Compound Index*: `{ userId: 1, githubRepoId: 1 }` (Unique).
+| Method | Endpoint | Auth | Description |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/repositories` | Session | List the signed-in user's repositories. |
+| `POST` | `/api/repositories` | Session | Register a repository and start indexing in the background. Body: `{ githubUrl }`. Returns `201`. |
+| `POST` | `/api/repositories/[repoId]/reindex` | Session | Reset a repository to `pending` and re-run indexing. |
+| `POST` | `/api/repositories/[repoId]/chat` | None (see [limitations](#known-limitations)) | Answer a question. Body: `{ query, githubRepoId }`. Returns `{ success, answer }`. |
 
-### 3. Message (`MessageModel`)
-Logs dialogue history for chat screens:
-* `userId` (ObjectId, Ref: User, Required): Author owner identifier.
-* `repositoryId` (ObjectId, Ref: Repository, Required): Target repository.
-* `role` (Enum: user/assistant, Required): Speaker role.
-* `content` (String, Required): Message text.
-* *Compound Index*: `{ repositoryId: 1, createdAt: 1 }`.
+Chat messages are persisted through Server Actions (`saveMessageAction`), which check the session before writing.
 
----
+## Data model
 
-## Engineering Decisions
+```mermaid
+erDiagram
+    USER ||--o{ REPOSITORY : owns
+    USER ||--o{ MESSAGE : writes
+    REPOSITORY ||--o{ MESSAGE : has
+    REPOSITORY ||..o{ VECTOR_POINT : "indexed as (Qdrant)"
 
-### Dedicated Vector Search with Qdrant
-Using Qdrant instead of generic database vector extensions allows for fast vector operations and native payload filtering. Multi-user isolation is maintained by creating payload keyword indexes on `githubRepoId` and applying strict filters to similarity searches, ensuring users only retrieve chunks from their authorized repositories.
+    USER {
+        string githubId UK
+        string githubUsername
+        string email UK
+        string avatarUrl
+        string access_token
+    }
+    REPOSITORY {
+        ObjectId userId FK
+        string githubRepoId
+        string repoName
+        string githubRepoOwner
+        enum visibility "public | private"
+        enum status "pending | indexing | ready | failed"
+        enum indexingStage "connecting | chunking | embedding | storing"
+        string defaultBranch
+        string[] languages
+        date lastIndexedAt
+    }
+    MESSAGE {
+        ObjectId userId FK
+        ObjectId repositoryId FK
+        enum role "user | assistant"
+        string content
+    }
+    VECTOR_POINT {
+        uuid id "v5(repoId:path:chunkIndex)"
+        float[] vector "3072-d"
+        string githubRepoId "indexed"
+        string filePath
+        string pageContent
+        object loc "line range"
+    }
+```
 
-### Asynchronous Ingestion Pipelines
-Codebase processing tasks—cloning directories, filtering files, batching embedding requests—can easily exceed serverless or Route Handler execution limits (usually 15-60 seconds). To avoid timeouts, the API route registers the repository, immediately responds to the client with `201 Created`, and triggers the ingestion pipeline asynchronously.
+**Indexes:** `Repository { userId, githubRepoId }` unique (one copy per user), `Message { repositoryId, createdAt }` for ordered history, and a Qdrant keyword index on `githubRepoId`.
 
-### Structured Storage Hybrid (MongoDB + Vector DB)
-Relational metadata (users, repository settings, conversational histories) is stored in MongoDB, which naturally accommodates unstructured chat logs. Heavy dense vector data is offloaded to Qdrant. This separation of concerns prevents index bloat and keeps document reads fast.
+## Design decisions
 
-### Deterministic Vector Keys (UUID v5)
-Vectors in Qdrant are upserted using UUIDs generated via UUID v5. The key is hashed using a constant `NAMESPACE` and a combination of `githubRepoId`, `filePath`, and `chunkIndex`. This guarantees that reprocessing a codebase overwrite generates matching IDs, avoiding vector duplication and facilitating easy cleanups.
+**Qdrant instead of a vector extension on the app database.** Search is filtered by `githubRepoId` on every query. Qdrant applies the filter inside the ANN search over an indexed payload field, so one shared collection serves every repository without scanning other tenants' vectors.
 
----
+**Deterministic vector IDs (UUID v5).** Each chunk's ID is `uuidv5("githubRepoId:filePath:chunkIndex", NAMESPACE)`. Re-indexing a repository produces the same IDs, so upserts overwrite in place instead of piling up duplicates, and retries are safe.
 
-## Security
+**Language-aware chunks of 1500 characters with 200 overlap.** Smaller chunks (we started at 500) cut functions in half and starved the model of context. Splitting on language separators keeps functions and classes intact where possible, and the overlap preserves continuity across boundaries.
 
-* **OAuth Scopes**: Requests minimal read access from GitHub to list and pull files during ingestion.
-* **Route Authentication Safeguards**: Server Actions and API endpoints inspect the NextAuth session token. Unauthorized attempts are rejected with `401 Unauthorized` before querying backend resources.
-* **Tenant Isolation**: Database lookup filters on `userId` and vector searches in Qdrant verify `githubRepoId` parameters to prevent cross-user data leaks.
+**Wide retrieval with a relevance floor.** Retrieving 12 chunks gives the model enough surrounding code to reason across files. The 0.3 score floor stops unrelated code from diluting the context, and an empty result short-circuits the LLM call.
 
----
+**Context shaped for reading, not ranking.** Retrieved chunks are grouped by file and ordered by position, with line ranges. The model sees each file's code in source order, which makes cross-function reasoning and accurate citations easier.
 
-## Current Limitations
+**System instruction, separated from data.** Rules live in Gemini's `systemInstruction`. The user turn holds only `<context>` and `<question>`, so the instructions stay distinct from retrieved code that might itself contain instruction-like text.
+
+**Respond first, index in the background.** Indexing a large repository takes far longer than a request should. The API saves the repository, returns `201` and runs the pipeline without awaiting it. The UI tracks progress through `status` and `indexingStage`.
+
+**MongoDB for state, Qdrant for vectors.** Users, repository state and chat history are document-shaped and change often. Embeddings are large and only ever searched. Keeping them apart lets each store do what it is good at.
+
+## Known limitations
+
+Strata v1 is a working end-to-end product with known gaps. They are listed here openly:
 
 > [!WARNING]
-> **Embedding Limit**: The ingestion pipeline limits embedding generation to the first 80 code chunks (`allChunks.slice(0, 80)` in `ingestionPipeline.ts`) to avoid rate limit constraints on the Gemini embedding API.
-* **Single Conversation Thread**: The database schema links chat messages directly to a repository ID. As a result, users are limited to a single continuous chat thread per repository.
-* **Blocking Responses**: Answers are returned as a single complete block. Streaming responses (Server-Sent Events/chunked HTTP transfers) are not supported.
-* **No Repository Deletion API**: The repository management views do not currently expose endpoints or UI components to delete indexed codebases or vector indexes.
+> **Indexing is capped at the first 80 chunks** per repository (`allChunks.slice(0, 80)` in `src/ingestion/ingestionPipeline.ts`) to stay inside Gemini embedding rate limits. On larger repositories, code beyond that cap is not searchable.
 
----
+- **Chat endpoint is not session-protected.** `POST /api/repositories/[repoId]/chat` does not yet check the session or verify that the caller owns the repository.
+- **Background indexing on serverless.** The pipeline runs after the response is sent. On serverless platforms the function can be frozen mid-run, leaving a repository stuck in `indexing`. A durable job queue is the proper fix.
+- **Each question is answered on its own.** History is saved and displayed, but previous turns are not sent to the model, so follow-ups like "and where is that called?" lack context.
+- **No streaming.** Answers arrive as one complete response.
+- **No repository deletion.** Repositories and their vectors cannot be removed from the UI yet.
+- **Large trees.** GitHub truncates very large recursive trees, and truncated results are not yet detected.
+- **No automated tests yet.**
 
 ## Roadmap
 
-### Completed
-* [x] GitHub OAuth authentication.
-* [x] Repository discovery dashboard.
-* [x] Asynchronous background indexing.
-* [x] Language-aware code chunking (via AST analysis).
-* [x] Qdrant payload-based vector searches.
-* [x] Context-grounded codebase chat.
-* [x] Chat history persistence.
-* [x] Input validation that disables chat inputs unless repository status is `ready`.
-* [x] Failed index re-triggering endpoint.
-
-### In Progress
-* [ ] Syntax highlighting for code blocks in chat responses.
-* [ ] Ingest failure logs and diagnostics screens.
-
-### Planned
-* [ ] Real-time response streaming for chat.
-* [ ] Multi-thread conversations per repository.
-* [ ] Webhook triggers to automatically sync repositories on GitHub push events.
-
----
+- [x] GitHub OAuth and private repository access
+- [x] Background indexing with live status and retry
+- [x] Language-aware chunking and Qdrant vector search
+- [x] Grounded answers with `file:line` citations
+- [x] Markdown-rendered answers
+- [x] Persistent chat history
+- [ ] Remove the 80-chunk cap with rate-limited, resumable embedding
+- [ ] Session and ownership checks on the chat endpoint
+- [ ] Durable background jobs for indexing
+- [ ] Conversation memory for follow-up questions
+- [ ] Streaming responses
+- [ ] Repository deletion and re-sync on GitHub push (webhooks)
+- [ ] Hybrid search (keyword + vector) and re-ranking
+- [ ] Retrieval evaluation set to measure answer quality
 
 ## Contributing
 
-1. **Fork the Repository**: Create a personal copy of the project.
-2. **Create a Feature Branch**:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-3. **Commit Changes**: Follow semantic commit rules.
-4. **Push & PR**: Open a Pull Request pointing to our default branch. Verify that your codebase compiles and has no active lints.
-
----
+1. Fork the repository and create a branch: `git checkout -b feat/your-feature`.
+2. Use [Conventional Commits](https://www.conventionalcommits.org/): `feat(retrieval): add re-ranking`.
+3. Make sure `npx tsc --noEmit`, `npm run lint` and `npm run build` pass.
+4. Open a pull request against `main` describing the change and how you tested it.
 
 ## License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+No license has been chosen yet, so all rights are reserved by the author. Open an issue if you would like to use Strata in your own work.
