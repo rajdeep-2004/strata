@@ -1,6 +1,7 @@
 "use client";
 
 import type { Message } from "@/src/types/message";
+import MarkdownMessage from "./MarkdownMessage";
 
 interface MessageBubbleProps {
   message: Message;
@@ -30,7 +31,11 @@ export default function MessageBubble({ message, sessionUser }: MessageBubblePro
             : "bg-surface border-outline-variant/60 text-on-surface"
         }`}
       >
-        <p className="whitespace-pre-wrap font-body-md text-[14px] leading-relaxed">{message.content}</p>
+        {message.role === "assistant" ? (
+          <MarkdownMessage content={message.content} />
+        ) : (
+          <p className="whitespace-pre-wrap font-body-md text-[14px] leading-relaxed">{message.content}</p>
+        )}
       </div>
 
       {message.role === "user" && sessionUser.avatarUrl && (
